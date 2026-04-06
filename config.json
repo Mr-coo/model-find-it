@@ -1,0 +1,49 @@
+{
+  "models": {
+    "fruit_classification": {
+      "path": "fruit_classification/Fruit_Classification.pth",
+      "type": "pytorch",
+      "framework": "torch",
+      "architecture": "MobileNetV2",
+      "input_size": 224,
+      "classes": ["apple", "banana", "orange"],
+      "pretrained": true
+    },
+    "freshness_detection": {
+      "path": "rottenvsfresh_classifier/rottenvsfresh_model.h5",
+      "type": "tensorflow",
+      "framework": "tensorflow.keras",
+      "input_size": 224,
+      "classes": ["fresh", "rotten"],
+      "pretrained": true
+    }
+  },
+  "pipeline": {
+    "image_preprocessing": {
+      "format": "BGR",
+      "size": 224,
+      "normalize": {
+        "mean": [0.485, 0.456, 0.406],
+        "std": [0.229, 0.224, 0.225]
+      }
+    },
+    "dimension_measurement": {
+      "method": "opencv_contour",
+      "min_contour_area": 1000,
+      "blur_kernel": [5, 5],
+      "threshold_value": 120
+    }
+  },
+  "api": {
+    "host": "0.0.0.0",
+    "port": 5000,
+    "debug": false,
+    "cors_enabled": true,
+    "max_file_size_mb": 50
+  },
+  "device": {
+    "use_gpu": true,
+    "gpu_index": 0,
+    "fallback_to_cpu": true
+  }
+}
