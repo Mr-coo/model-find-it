@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Dict, Tuple, Optional
 import json
 from datetime import datetime
+import os
 
 
 class UnifiedFruitAnalyzer:
@@ -26,8 +27,8 @@ class UnifiedFruitAnalyzer:
     
     def __init__(
         self,
-        fruit_class_model_path: str = "fruit_classification/Fruit_Classification.pth",
-        freshness_model_path: str = "rottenvsfresh_classifier/rottenvsfresh_model.h5",
+        fruit_class_model_path: str = None,
+        freshness_model_path: str = None,
         device: str = "cuda" if torch.cuda.is_available() else "cpu"
     ):
         """
@@ -38,6 +39,15 @@ class UnifiedFruitAnalyzer:
             freshness_model_path: Path to the freshness detection model
             device: Device to run models on (cuda/cpu)
         """
+        # Get the directory where this file is located (core/)
+        script_dir = Path(__file__).parent
+        project_root = script_dir.parent
+        
+        # Set default paths relative to project root
+        if fruit_class_model_path is None:
+            fruit_class_model_path = str(project_root / "fruit_classification" / "Fruit_Classification.pth")
+        if freshness_model_path is None:
+            freshness_model_path = str(project_root / "rottenvsfresh_classifier" / "rottenvsfresh_model.h5")
         self.device = device
         self.fruit_class_model = None
         self.freshness_model = None
@@ -61,9 +71,16 @@ class UnifiedFruitAnalyzer:
             # Load fruit classification model
             if Path(fruit_model_path).exists():
                 self.fruit_class_model = models.mobilenet_v2(weights='DEFAULT')
-                self.fruit_class_model.classifier[1] = nn.Linear(
-                    self.fruit_class_model.last_channel,
-                    len(self.class_names)
+                # Create the nested Sequential structure to match the saved model
+                self.fruit_class_model.classifier = nn.Sequential(
+                    nn.Dropout(0.2),
+                    nn.Sequential(
+                        nn.Dropout(0.3),
+                        nn.Linear(
+                            self.fruit_class_model.last_channel,
+                            len(self.class_names)
+                        )
+                    )
                 )
                 self.fruit_class_model.load_state_dict(torch.load(fruit_model_path, map_location=self.device))
                 self.fruit_class_model.to(self.device)
@@ -344,12 +361,17 @@ class FruitAnalysisService:
     This class provides REST API ready methods for backend integration
     """
     
-    def __init__(self, model_dir: str = "."):
+    def __init__(self, model_dir: str = None):
         """Initialize the backend service."""
-        self.analyzer = UnifiedFruitAnalyzer(
-            fruit_class_model_path=f"{model_dir}/fruit_classification/Fruit_Classification.pth",
-            freshness_model_path=f"{model_dir}/rottenvsfresh_classifier/rottenvsfresh_model.h5"
-        )
+        if model_dir is None:
+            # If no model_dir specified, let UnifiedFruitAnalyzer handle path resolution
+            self.analyzer = UnifiedFruitAnalyzer()
+        else:
+            # Use provided model_dir for backward compatibility
+            self.analyzer = UnifiedFruitAnalyzer(
+                fruit_class_model_path=f"{model_dir}/fruit_classification/Fruit_Classification.pth",
+                freshness_model_path=f"{model_dir}/rottenvsfresh_classifier/rottenvsfresh_model.h5"
+            )
     
     def analyze_image(self, image_path_or_bytes) -> Dict:
         """

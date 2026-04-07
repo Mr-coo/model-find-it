@@ -21,7 +21,7 @@ CORS(app)
 
 # Initialize the analysis service
 try:
-    service = FruitAnalysisService(model_dir=".")
+    service = FruitAnalysisService()
     logger.info("✓ Fruit Analysis Service initialized successfully")
 except Exception as e:
     logger.error(f"✗ Failed to initialize service: {e}")
